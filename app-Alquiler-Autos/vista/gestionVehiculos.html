@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulario de Gestión de Vehículos</title>
+    <link rel="stylesheet" href="../estilos/estilosVehiculos.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+</head>
+<body>
+    <header class="header-section">
+        <div class="header-left">
+            <h1>
+                <img src="../Imagenes/iconoAuto.png" alt="Icono Carro" class="icono-carro" />
+                UTA DRIVE - ADMIN
+            </h1>
+        </div>
+        <nav class="header-right">
+            <ul>
+                <li><a href="administrador.html">Dashboard</a></li>
+                <li><a href="gestionEmpleados.html">Usuarios</a></li>
+                <li><a href="gestionVehiculos.html">Vehículos</a></li>
+                <li><a href="#">Reportes</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <button id="openModalBtn" class="open-modal-btn">Agregar Vehículo</button>
+
+    <!-- Modal -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span id="closeModalBtn" class="close-btn">&times;</span>
+            <h2 id="segundoTitulo">Detalles del Vehículo</h2>
+            <form id="vehicleForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="titulo_vehiculo">Título del Vehículo:</label>
+                        <input type="text" id="tituloVehiculo" name="tituloVehiculo" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="matricula_vehiculo">Matrícula del Vehículo:</label>
+                        <input type="text" id="matriculaVehiculo" name="matriculaVehiculo" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="marca_vehiculo">Marca:</label>
+                        <input type="text" id="marcaVehiculo" name="marcaVehiculo" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="modelo_vehiculo">Modelo:</label>
+                        <input type="text" id="modeloVehiculo" name="modeloVehiculo" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="imagen_vehiculo">Imagen del Vehículo:</label>
+                        <div class="image-container">
+                            <img id="imagenPreview" src="" alt="Imagen del Vehículo">
+                        </div>
+                        <input type="file" id="imagen_vehiculo" name="imagen_vehiculo" accept="image/*">
+                    </div>
+                    <div class="form-group">
+                        <label for="año_vehiculo">Año del Vehículo:</label>
+                        <input type="number" id="anioVehiculo" name="anioVehiculo" min="1886" max="2024" required placeholder="Ingreso solo de año">
+                    </div>
+                    <div class="form-group">
+                        <label for="color_vehiculo">Color del Vehículo:</label>
+                        <input type="text" id="colorVehiculo" name="colorVehiculo" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="combustible_vehiculo">Tipo de Combustible:</label>
+                        <select id="combustibleVehiculo" name="combustibleVehiculo" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="pasajeros_vehiculo">Número de Pasajeros:</label>
+                        <input type="number" id="pasajerosVehiculo" name="pasajerosVehiculo" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="transmision_vehiculo">Transmisión:</label>
+                        <select id="transmisionVehiculo" name="transmisionVehiculo" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="precio_vehiculo">Precio del Vehículo:</label>
+                        <input type="number" id="precioVehiculo" name="precioVehiculo" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="id_tipo_vehiculo">Tipo de Vehículo:</label>
+                        <select id="tipoVehiculo" name="tipoVehiculo" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="caracteristicas">Características:</label>
+                        <textarea id="caracteristicas" name="caracteristicas" rows="4" required></textarea>
+                    </div>
+                </div>
+                <button type="submit" id="guardarVehicle">Guardar Vehículo</button>
+            </form>
+        </div>
+    </div>
+    <div class="vehiculos-container">
+        <!-- Aquí se mostrarán los vehículos registrados como tarjetas -->
+    </div>
+
+    <footer class="footer-section">
+        <p>&copy; 2024 UTA DRIVE. Todos los derechos reservados.</p>
+    </footer>
+
+    <script>
+       $(document).ready(function () {
+    // Modal open and close
+    $('#openModalBtn').click(function () {
+        $('#modal').fadeIn();
+    $('#vehicleForm')[0].reset(); // Limpiar el formulario
+    $('#guardarVehicle').text('Guardar Vehículo'); // Cambiar el texto del botón
+    $('#vehicleForm').data('accion', 'crear'); // Establecer acción como crear
+    $('#vehicleForm').removeData('id'); // Limpiar cualquier ID almacenado
+    $('#matriculaVehiculo').prop('readonly', false); // Habilitar matrícula
+
+    // Restablecer la imagen a un valor predeterminado
+    $('#imagenPreview').attr('src', '../fotosVehiculos/default.jpg');
+    });
+
+    $('#closeModalBtn').click(function () {
+        $('#modal').fadeOut();
+    });
+
+    // Función para cargar vehículos desde la base de datos y mostrarlos en tarjetas
+    function cargarVehiculos() {
+        $.ajax({
+            url: 'http://localhost/app-Alquiler-Autos/backend/apiRestCards.php',
+            method: 'GET',
+            data: { action: 'obtenerVehiculos' },
+            dataType: 'json',
+            success: function (data) {
+                $('.vehiculos-container').empty(); // Limpiar la lista antes de agregar
+                data.forEach(function (vehiculo) {
+                    var imagenUrl = vehiculo.imagen_vehiculo ? `../fotosVehiculos/${vehiculo.imagen_vehiculo}` : '../fotosVehiculos/default.jpg';
+                    var card = `
+                        <div class="card" id="${vehiculo.matricula_vehiculo}">
+                            <img src="${imagenUrl}" alt="Imagen del Vehículo">
+                            <h3>${vehiculo.titulo_vehiculo}</h3>
+                            <h4>Características: ${vehiculo.caracteristicas}</h4>
+                            <p>Marca: ${vehiculo.marca_vehiculo} | Modelo: ${vehiculo.modelo_vehiculo}</p>
+                            <p>Año: ${vehiculo.año_vehiculo} | Color: ${vehiculo.color_vehiculo}</p>
+                            <p>Transmisión: ${vehiculo.transmision_vehiculo} | Combustible: ${vehiculo.combustible_vehiculo}</p>
+                            <p>Precio: $${vehiculo.precio_vehiculo}</p>
+                            <div class="card-actions">
+                              <button class="edit-btn" data-id="${vehiculo.matricula_vehiculo}">Editar</button>
+
+                                <button class="delete-btn" data-id="${vehiculo.matricula_vehiculo}">Eliminar</button>
+                            </div>
+                        </div>
+                    `;
+                    $('.vehiculos-container').append(card);
+                });
+                $(document).on('click', '.edit-btn', function () {
+                    var matriculaVehiculo = $(this).data('id');
+                    // Obtener los detalles del vehículo con AJAX
+                    $.ajax({
+                        url: 'http://localhost/app-Alquiler-Autos/backend/apiRestCards.php',
+                        method: 'GET',
+                        data: { action: 'obtenerVehiculoPorMatricula', matricula_vehiculo: matriculaVehiculo },
+                        dataType: 'json',
+                        success: function (vehiculo) {
+    console.log(vehiculo);  // Verifica si los datos son correctos
+    $('#modal').fadeIn();
+    $('#tituloVehiculo').val(vehiculo.titulo_vehiculo);
+    $('#matriculaVehiculo').val(vehiculo.matricula_vehiculo).prop('readonly', true);
+    $('#marcaVehiculo').val(vehiculo.marca_vehiculo);
+    $('#modeloVehiculo').val(vehiculo.modelo_vehiculo);
+   
+    $('#anioVehiculo').val(vehiculo.año_vehiculo);
+    $('#colorVehiculo').val(vehiculo.color_vehiculo);
+    $('#combustibleVehiculo').val(vehiculo.combustible_vehiculo);
+    $('#transmisionVehiculo').val(vehiculo.transmision_vehiculo);
+    $('#precioVehiculo').val(vehiculo.precio_vehiculo);
+   
+    $('#caracteristicas').val(vehiculo.caracteristicas);
+
+    $('#guardarVehicle').text('Actualizar Vehículo');
+    $('#vehicleForm').data('accion', 'editar');
+    $('#vehicleForm').data('id', vehiculo.matricula_vehiculo);
+       // Cargar imagen actual
+       var imagenUrl = vehiculo.imagen_vehiculo ? `../fotosVehiculos/${vehiculo.imagen_vehiculo}` : '../fotosVehiculos/default.jpg';
+    $('#imagenPreview').attr('src', imagenUrl);
+
+    // Cargar número de pasajeros
+    $('#pasajerosVehiculo').val(vehiculo.pasajeros_vehiculo);
+},
+error: function (error) {
+    console.error("Error al obtener los detalles del vehículo:", error);
+}
+                    });
+                });
+
+                // Acción de eliminar vehículo
+                $('.delete-btn').click(function () {
+                    var matriculaVehiculo = $(this).data('id');
+                    if (confirm('¿Estás seguro de que deseas eliminar este vehículo?')) {
+                        $.ajax({
+                            url: 'http://localhost/app-Alquiler-Autos/backend/apiRestCards.php?action=eliminarVehiculo',
+                            method: 'POST',
+                            data: { matricula_vehiculo: matriculaVehiculo },
+                            success: function (response) {
+                                alert(response.mensaje);
+                                cargarVehiculos(); // Recargar vehículos después de eliminar
+                            },
+                            error: function (error) {
+                                alert("Error al eliminar el vehículo.");
+                            }
+                        });
+                    }
+                });
+
+                $(document).on('click', '.edit-btn', function () {
+    $('#modal').fadeIn();
+   
+});
+            },
+            error: function (error) {
+                console.error("Error al cargar vehículos:", error);
+            }
+        });
+    }
+
+    cargarVehiculos();
+
+    // Cargar tipos de vehículos, transmisiones, y combustibles con AJAX
+    $.ajax({
+        url: 'http://localhost/app-Alquiler-Autos/backend/apiRestCards.php',
+        method: 'GET',
+        data: { action: 'obtenerTiposVehiculos' },
+        success: function(data) {
+            data.forEach(function(tipo) {
+                $('#tipoVehiculo').append(new Option(tipo.tipo_vehiculo, tipo.id_tipo_vehiculo));
+            });
+        },
+        error: function(error) {
+            console.error("Error al cargar tipos de vehículos:", error);
+        }
+    });
+
+    $.ajax({
+        url: 'http://localhost/app-Alquiler-Autos/backend/apiRestCards.php',
+        method: 'GET',
+        data: { action: 'obtenerTransmisiones' },
+        success: function(data) {
+            data.forEach(function(transmision) {
+                $('#transmisionVehiculo').append(new Option(transmision.transmision_vehiculo, transmision.transmision_vehiculo));
+            });
+        },
+        error: function(error) {
+            console.error("Error al cargar transmisiones:", error);
+        }
+    });
+
+    $.ajax({
+        url: 'http://localhost/app-Alquiler-Autos/backend/apiRestCards.php',
+        method: 'GET',
+        data: { action: 'obtenerCombustibles' },
+        success: function(data) {
+            data.forEach(function(combustible) {
+                $('#combustibleVehiculo').append(new Option(combustible.combustible_vehiculo, combustible.combustible_vehiculo));
+            });
+        },
+        error: function(error) {
+            console.error("Error al cargar tipos de combustibles:", error);
+        }
+    });
+
+    // Enviar el formulario de registro de vehículo
+    $('#vehicleForm').on('submit', function (e) {
+        e.preventDefault(); // Evitar envío tradicional del formulario
+
+        var accion = $(this).data('accion');
+        var matriculaVehiculo = $(this).data('id');
+        var url = accion === 'crear'
+            ? 'http://localhost/app-Alquiler-Autos/backend/apiRestCards.php?action=registrarVehiculo'
+            : `http://localhost/app-Alquiler-Autos/backend/apiRestCards.php?action=editarVehiculo`;
+        
+        var formData = new FormData(this);
+        $.ajax({
+            url: url,
+            method: 'POST',
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function (response) {
+                alert(response.mensaje);
+                cargarVehiculos(); // Recargar vehículos después de guardar
+                $('#modal').fadeOut(); // Cerrar el modal
+            },
+            error: function (error) {
+                console.error("Error al guardar/actualizar vehículo:", error);
+                alert("Error al guardar o actualizar el vehículo.");
+            }
+        });
+    });
+});
+
+    </script>
+</body>
+</html>

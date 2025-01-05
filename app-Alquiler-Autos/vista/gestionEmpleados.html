@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestión de Usuarios - UTA DRIVE</title>
+    <link rel="stylesheet" href="../estilos/estilosAdmin.css" />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+</head>
+<body class="body-section">
+    <header class="header-section">
+        <div class="header-left">
+            <h1>
+                <img src="../Imagenes/iconoAuto.png" alt="Icono Carro" class="icono-carro" />
+                UTA DRIVE - ADMIN
+            </h1>
+        </div>
+        <nav class="header-right">
+            <ul>
+                <li><a href="administrador.html">Dashboard</a></li>
+                <li><a href="gestionEmpleados.html">Usuarios</a></li>
+                <li><a href="gestionVehiculos.html">Vehículos</a></li>
+                <li><a href="#">Reportes</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section class="admin-main-section">
+        <div class="admin-dashboard">
+            <h2 id="gestionUsuarios">Gestión de Usuarios</h2>
+            <div class="admin-dashboard">
+                <div class="acciones-contenedor">
+                    <input type="text" id="searchInput" placeholder="Buscar por cédula..." />
+                    <button class="search-button" id="buscarEmpleadoBtn">Buscar</button>
+                    <button id="crearEmpleadoBtn">Crear Empleado</button>
+                </div>
+            </div>
+            
+            <div class="modal" id="modalEmpleado" style="display:none;">
+                <div class="modal-content">
+                    <!-- Aquí está la X para cerrar el modal -->
+                    <span class="close-btn">&times;</span>
+                    <h3>Agregar Nuevo Empleado</h3>
+                    <form id="registroEmpleado" class="registroEmpleados">
+                        <input type="hidden" name="accion" value="registrarEmpleado" />
+            
+                        <div class="form-group">
+                            <label for="cedulaEmpleado">Cédula:</label>
+                            <input type="text" id="cedulaEmpleado" name="cedula_Empleado" placeholder="Ingrese la cédula" required />
+                        </div>
+            
+                        <div class="form-group">
+                            <label for="nombreEmpleado">Nombre:</label>
+                            <input type="text" id="nombreEmpleado" name="nombre_Empleado" placeholder="Ingrese el nombre" required />
+                        </div>
+            
+                        <div class="form-group">
+                            <label for="apellidoEmpleado">Apellido:</label>
+                            <input type="text" id="apellidoEmpleado" name="apellido_Empleado" placeholder="Ingrese el apellido" required />
+                        </div>
+            
+                        <div class="form-group">
+                            <label for="correoEmpleado">Correo Electrónico:</label>
+                            <input type="email" id="correoEmpleado" name="correo_Empleado" placeholder="Ingrese el correo electrónico" required />
+                        </div>
+            
+                        <div class="form-group">
+                            <label for="contrasenaEmpleado">Contraseña:</label>
+                            <div class="password-container">
+                                <input type="password" id="contrasenaEmpleado" name="clave_Empleado" placeholder="Ingrese la contraseña" required />
+                                <i id="togglePassword" class="fas fa-eye"></i> <!-- Icono para mostrar/ocultar -->
+                            </div>
+                        </div>
+            
+                        <div class="form-group">
+                            <label for="rol">Rol:</label>
+                            <select id="rol" name="rol" required>
+                                
+                            </select>
+                        </div>
+            
+                        <button type="submit" class="registrate-button">Agregar Empleado</button>
+                    </form>
+                </div>
+            </div>
+            
+
+            <div class="usuarios-lista">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Cédula</th>
+                            <th>Nombre</th>
+                            <th>Apellido</th>
+                            <th>Correo Electrónico</th>
+                            <th>Rol</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaUsuarios">
+                        <!-- Aquí se generarán las filas de los usuarios -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer-section">
+        <p>&copy; 2024 UTA DRIVE. Todos los derechos reservados.</p>
+    </footer>
+
+    <script>
+      $(document).ready(function () {
+    // Llamar a la función para cargar los datos inicialmente
+    cargarDatos();
+    $("#togglePassword").on("click", function () {
+        var passwordField = $("#contrasenaEmpleado");
+        var type = passwordField.attr("type") === "password" ? "text" : "password";
+        passwordField.attr("type", type);
+
+        // Cambiar el ícono dependiendo del estado de la contraseña
+        $(this).toggleClass("fa-eye fa-eye-slash");
+    });
+
+    // Mostrar el modal de creación de empleados
+    $("#crearEmpleadoBtn").on("click", function () {
+        $("#modalEmpleado").show(); // Mostrar el modal
+        $("#registroEmpleado")[0].reset();
+        $("#registroEmpleado").data("accion", "crear"); // Indicar que es una creación
+        $("#cedulaEmpleado").prop("readonly", false);
+        $(".registrate-button").text("Crear Empleado");
+        cargarRoles();
+    });
+
+    // Cerrar el modal
+    $(".close-btn").on("click", function () {
+        $("#modalEmpleado").hide(); // Ocultar el modal
+        $("#registroEmpleado")[0].reset(); // Limpiar los campos del formulario
+    });
+
+    $(window).on("click", function (event) {
+        if ($(event.target).is("#modalEmpleado")) {
+            $("#modalEmpleado").hide(); // Ocultar el modal
+        }
+    });
+
+    // Enviar formulario de registro o edición de empleado
+    $("#registroEmpleado").on("submit", function (event) {
+        event.preventDefault();
+        var formData = $(this).serialize();
+        var accion = $(this).data("accion");
+
+        $.ajax({
+            type: "POST",
+            url: "http://localhost/app-Alquiler-Autos/backend/apiRest.php",
+            data: formData + "&accion=" + (accion === "editar" ? "editarEmpleado" : "registrarEmpleado"),
+            dataType: "json",
+            success: function (respuesta) {
+                alert(respuesta.mensaje);
+                cargarDatos(); // Recargar datos después de registrar o editar
+                $("#modalEmpleado").hide();
+            },
+            error: function (xhr) {
+                alert("Hubo un error al " + (accion === "editar" ? "editar" : "registrar") + " el empleado.");
+            },
+        });
+    });
+
+    // Buscar empleado por cédula
+    $("#buscarEmpleadoBtn").on("click", function () {
+            var cedula = $("#searchInput").val().trim();
+            if (cedula) {
+                $.ajax({
+                    type: "GET",
+                    url: "http://localhost/app-Alquiler-Autos/backend/apiRest.php",
+                    data: { accion: "buscarEmpleadoPorCedula", cedula_Empleado: cedula },
+                    dataType: "json",
+                    success: function (respuesta) {
+                $("#tablaUsuarios").empty(); // Limpiar la tabla antes de cargar los nuevos resultados
+                if (respuesta.mensaje) {
+                    $("#tablaUsuarios").append(`<tr><td colspan="6">${respuesta.mensaje}</td></tr>`);
+                } else {
+                    var fila = `<tr>
+                        <td>${respuesta.cedula_Empleado}</td>
+                        <td>${respuesta.nombre_Empleado}</td>
+                        <td>${respuesta.apellido_Empleado}</td>
+                        <td>${respuesta.correo_Empleado}</td>
+                        <td>${respuesta.rol}</td>
+                        <td>
+                            <button class="editar-btn" data-id="${respuesta.cedula_Empleado}"><i class="fa-solid fa-user-pen"></i></button>
+                            <button class="eliminar-btn" data-id="${respuesta.cedula_Empleado}"><i class="fas fa-trash-alt"></i></button>
+                        </td>
+                    </tr>`;
+                    $("#tablaUsuarios").append(fila); // Agregar los datos a la tabla
+                }
+            },
+            error: function (xhr) {
+                console.error("Error al realizar la búsqueda:", xhr.responseText);
+            }
+                });
+            } else {
+                cargarDatos();
+            }
+        });
+
+
+    // Función para cargar los datos de los empleados
+    function cargarDatos() {
+     $("#tablaUsuarios").empty(); // Limpiar la tabla antes de cargar los nuevos datos
+     $.ajax({
+         type: "GET",
+         url: "http://localhost/app-Alquiler-Autos/backend/apiRest.php", // Ruta de la API
+         data: {  accion: "seleccionarEmpleado"}, 
+         dataType: "json",
+         success: function (respuesta) {
+            
+             if (respuesta.length > 0) {
+                 respuesta.forEach(function (element) {
+                     var fila = `<tr>
+                         <td>${element.cedula_Empleado}</td>
+                         <td>${element.nombre_Empleado}</td>
+                         <td>${element.apellido_Empleado}</td>
+                         <td>${element.correo_Empleado}</td>
+                         <td>${element.rol}</td>
+                         <td>
+                             <button class="editar-btn" data-id="${element.cedula_Empleado}"><i class="fa-solid fa-user-pen"></i></button>
+                             <button class="eliminar-btn" data-id="${element.cedula_Empleado}"><i class="fas fa-trash-alt"></i></button>
+                         </td>
+                     </tr>`;
+                     $("#tablaUsuarios").append(fila); // Agregar los datos a la tabla
+                 });
+             } else {
+                 $("#tablaUsuarios").append('<tr><td colspan="6">No hay usuarios registrados</td></tr>');
+             }
+         },
+         error: function (xhr) {
+             console.error("Error al cargar los datos:", xhr.responseText);
+         }
+     });
+ }
+
+
+   
+
+    // Función para abrir el modal y cargar los datos para edición
+    $(document).on("click", ".editar-btn", function () {
+        var cedula = $(this).data("id");
+        $.ajax({
+            type: "GET",
+            url: "http://localhost/app-Alquiler-Autos/backend/apiRest.php",
+            data: { accion: "obtenerEmpleado", cedula_Empleado: cedula },
+            dataType: "json",
+            success: function (empleado) {
+                if (empleado) {
+                    $("#cedulaEmpleado").val(empleado.cedula_Empleado).prop("readonly", true);
+                    $("#nombreEmpleado").val(empleado.nombre_Empleado);
+                    $("#apellidoEmpleado").val(empleado.apellido_Empleado);
+                    $("#correoEmpleado").val(empleado.correo_Empleado);
+                  //  $("#contrasenaEmpleado").val(empleado.clave_Empleado);
+                  $("#contrasenaEmpleado").val("");
+                  cargarRoles();
+                    $("#rol").val(empleado.rol);
+                    $("#registroEmpleado").data("accion", "editar");
+                    $(".registrate-button").text("Actualizar Datos");
+                    $("#modalEmpleado").show();
+                } else {
+                    alert("No se encontraron los datos del empleado.");
+                }
+            },
+            error: function (xhr) {
+                console.error("Error al cargar los datos del empleado:", xhr.responseText);
+            },
+        });
+    });
+       // Función de búsqueda por cédula
+       $(".search-button").on("click", function () {
+        var cedulaEmpleado = $("#searchInput").val().trim(); // Obtener el valor del input de búsqueda
+        if (cedulaEmpleado) {
+            // Si hay cédula proporcionada, buscar el empleado
+            $.ajax({
+                type: "GET",
+                url: "http://localhost/app-Alquiler-Autos/backend/apiRest.php",
+                data: { accion: "buscarEmpleado", cedula_Empleado: cedulaEmpleado },
+                dataType: "json",
+                success: function (respuesta) {
+                    $("#tablaUsuarios").empty(); // Limpiar la tabla antes de cargar los nuevos resultados
+                    if (respuesta.mensaje) {
+                        $("#tablaUsuarios").append(`<tr><td colspan="6">${respuesta.mensaje}</td></tr>`);
+                    } else {
+                        var fila = `<tr>
+                            <td>${respuesta.cedula_Empleado}</td>
+                            <td>${respuesta.nombre_Empleado}</td>
+                            <td>${respuesta.apellido_Empleado}</td>
+                            <td>${respuesta.correo_Empleado}</td>
+                            <td>${respuesta.rol}</td>
+                            <td>
+                                <button class="editar-btn" data-id="${respuesta.cedula_Empleado}"><i class="fa-solid fa-user-pen"></i></button>
+                                <button class="eliminar-btn" data-id="${respuesta.cedula_Empleado}"><i class="fas fa-trash-alt"></i></button>
+                            </td>
+                        </tr>`;
+                        $("#tablaUsuarios").append(fila); // Agregar los datos a la tabla
+                    }
+                    $("#searchInput").val('');
+                },
+                error: function (xhr) {
+                    console.error("Error al realizar la búsqueda:", xhr.responseText);
+                }
+            });
+        } else {
+           // alert("Por favor ingresa una cédula.");
+        }
+    });
+
+    // Función para eliminar un empleado
+    $(document).on("click", ".eliminar-btn", function () {
+        var cedula = $(this).data("id");
+
+        if (confirm("¿Estás seguro de que deseas eliminar este empleado?")) {
+            $.ajax({
+                type: "POST",
+                url: "http://localhost/app-Alquiler-Autos/backend/apiRest.php",
+                data: {
+                    accion: "eliminarEmpleado",
+                    cedula_Empleado: cedula,
+                },
+                dataType: "json",
+                success: function (respuesta) {
+                    alert(respuesta.mensaje);
+                    cargarDatos();
+                },
+                error: function (xhr) {
+                    alert("Hubo un error al eliminar el empleado.");
+                },
+            });
+        }
+    });
+
+    // Función para cargar los roles dinámicamente
+    function cargarRoles() {
+        $.ajax({
+            type: "GET",
+            url: "http://localhost/app-Alquiler-Autos/backend/apiRest.php",
+            data: { accion: "obtenerRoles" },
+            dataType: "json",
+            success: function (roles) {
+                $("#rol").empty();
+                roles.forEach(function (rol) {
+                    $("#rol").append(`<option value="${rol.rol}">${rol.rol}</option>`);
+                });
+            },
+            error: function (xhr) {
+                console.error("Error al cargar los roles:", xhr.responseText);
+            },
+        });
+    }
+});
+
+
+    </script>
+    
+      
+</body>
+</html>
